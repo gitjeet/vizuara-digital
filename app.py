@@ -63,7 +63,7 @@ def train_model():
         # Apply one-hot encoding to these categorical columns
         X_data = pd.get_dummies(X_data, columns=categorical_cols, drop_first=True)
         # Split the data into training and test sets
-        X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=int(d_size), random_state=0)
+        X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=float(d_size), random_state=0)
         
         # Train the Decision Tree model
         decision_tree_model = DecisionTreeClassifier(criterion='gini', random_state=0, max_features='log2')
