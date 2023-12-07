@@ -3,9 +3,10 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
+from flask_cors import CORS
 from sklearn.impute import SimpleImputer
 app = Flask(__name__)
-
+CORS(app)
 df = pd.read_csv('./train.csv')
 dataset = pd.read_csv('./train.csv')
 features_X = list(df.columns)
