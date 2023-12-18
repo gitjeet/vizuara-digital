@@ -332,7 +332,7 @@ qChoices=[
 
 
 @app.route('/predict-emotion-custom',methods=['POST'])
-def predict_emotion():
+def predict_emotion_custom():
     try:
          chances = [0,0,0,0,0,0]
          data = request.get_json()
@@ -365,8 +365,6 @@ def predict_emotion():
          return jsonify(response)
     except Exception as e:
          return jsonify({'error':str(e)})
-
-
 
 
 
