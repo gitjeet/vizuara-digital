@@ -368,7 +368,5 @@ def predict_emotion_custom():
 
 
 
-
-
 if __name__ == '__main__':
     app.run(debug=True)
