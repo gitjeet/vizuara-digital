@@ -141,8 +141,10 @@ from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.ensemble import RandomForestClassifier
 
+global mydata
 mydata=[]
 global log_reg
+
 
 def dataframe_difference(df1, df2, which=None):
     comparison_df = df1.merge(
@@ -179,7 +181,6 @@ def Removing_urls(text):
     url_pattern = re.compile(r'https?://\S+|www\.\S+')
     return url_pattern.sub(r'', text)
 
-
 def normalize_text(df):
     df.text=df.text.apply(lambda text : lower_case(text))
     df.text=df.text.apply(lambda text : Removing_numbers(text))
@@ -199,9 +200,11 @@ def train_model(model,data,targets):
     text_clf.fit(data,targets)
     return text_clf
 
+
 @app.route('/train-model',methods=['POST'])
 def trainModel():
      try:
+          global mydata
           train=pd.DataFrame(mydata,columns=['text','emotion'])
           train=normalize_text(train)
           X_train=train['text'].values
@@ -241,7 +244,7 @@ def predict_emotion():
               'prediction':pred,
               'chances':chances
 		 }   
-         #print(pred,chances)
+         print(pred,chances)
          return jsonify(response)
     except Exception as e:
          return jsonify({'error':str(e)})
@@ -249,6 +252,7 @@ def predict_emotion():
 
 @app.route('/accessData')
 def accessData():
+    global mydata
     response={
         'data':mydata
     }
@@ -256,19 +260,16 @@ def accessData():
 
 @app.route('/data-size')
 def accessDataSize():
-    if(len(mydata)>0):
-         response={
-              'dataSize':int(1)
-              }
-    else:
-         response={
-              'dataSize':int(0)
-              }
+    global mydata
+    response={
+        'dataSize':int(len(mydata))
+    }
     return jsonify(response)
 
 @app.route('/add-data',methods=['POST'])
 def addData():
      try:
+          global mydata
           newData=request.get_json()
           text=newData['text']
           emotion=newData['emotion']
@@ -280,6 +281,7 @@ def addData():
 @app.route('/pop',methods=['POST'])
 def popData():
      try:
+          global mydata
           mydata.pop()
           return jsonify({'success':True})
      except:
@@ -288,6 +290,7 @@ def popData():
 @app.route('/reset',methods=['POST'])
 def resetData():
      try:
+          global mydata
           mydata.clear()
           return jsonify({'success':True})
      except:
@@ -295,6 +298,7 @@ def resetData():
 
 @app.route('/get-size')
 def getSize():
+          global mydata
           train=pd.DataFrame(mydata,columns=['text','emotion'])
           size=[
                int(train.emotion.value_counts().get('joy',0)),
