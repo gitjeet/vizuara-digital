@@ -135,17 +135,14 @@ def predict():
         return jsonify({'error': str(e)}), 500
 
 
+
 # Text Emotion Recognisation
 import re
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.ensemble import RandomForestClassifier
 
-global mydata
-mydata=[]
 global log_reg
-
-
 def dataframe_difference(df1, df2, which=None):
     comparison_df = df1.merge(
         df2,
@@ -204,7 +201,7 @@ def train_model(model,data,targets):
 @app.route('/train-model',methods=['POST'])
 def trainModel():
      try:
-          global mydata
+          mydata=request.get_json()
           train=pd.DataFrame(mydata,columns=['text','emotion'])
           train=normalize_text(train)
           X_train=train['text'].values
@@ -249,69 +246,6 @@ def predict_emotion():
     except Exception as e:
          return jsonify({'error':str(e)})
 
-
-@app.route('/accessData')
-def accessData():
-    global mydata
-    response={
-        'data':mydata
-    }
-    return jsonify(response)
-
-@app.route('/data-size')
-def accessDataSize():
-    global mydata
-    response={
-        'dataSize':int(len(mydata))
-    }
-    return jsonify(response)
-
-@app.route('/add-data',methods=['POST'])
-def addData():
-     try:
-          global mydata
-          newData=request.get_json()
-          text=newData['text']
-          emotion=newData['emotion']
-          mydata.append([text,emotion])
-          return jsonify({'success':True})
-     except:
-          return jsonify({'success':False,'error':'nvalid Request'})
-
-@app.route('/pop',methods=['POST'])
-def popData():
-     try:
-          global mydata
-          mydata.pop()
-          return jsonify({'success':True})
-     except:
-          return jsonify({'success':False,'error':'Invalid request'})
-
-@app.route('/reset',methods=['POST'])
-def resetData():
-     try:
-          global mydata
-          mydata.clear()
-          return jsonify({'success':True})
-     except:
-          return jsonify({'success':False,'error':'Invalid request'})          
-
-@app.route('/get-size')
-def getSize():
-          global mydata
-          train=pd.DataFrame(mydata,columns=['text','emotion'])
-          size=[
-               int(train.emotion.value_counts().get('joy',0)),
-               int(train.emotion.value_counts().get('sadness',0)),
-               int(train.emotion.value_counts().get('anger',0)),
-               int(train.emotion.value_counts().get('fear',0)),
-               int(train.emotion.value_counts().get('love',0)),
-               int(train.emotion.value_counts().get('surprise',0))
-            ]
-          response={
-               'count':size,
-          }
-          return jsonify(response)
 
 # Text Emotion Custom
 import joblib
