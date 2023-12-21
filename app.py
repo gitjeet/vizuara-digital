@@ -1,3 +1,4 @@
+import io
 from flask import Flask, request, jsonify
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -5,8 +6,120 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
 from flask_cors import CORS
 from sklearn.impute import SimpleImputer
+import re
+from sklearn.pipeline import Pipeline
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.ensemble import RandomForestClassifier
+from keras.models import load_model
+import numpy as np 
+import base64
+from PIL import Image
+
+
 app = Flask(__name__)
 CORS(app)
+############################## FOR Brain Tumor ###############################################
+model_path='model212.h5'
+model = load_model('model212.h5')
+@app.route('/idk_brain', methods=['POST'])
+def train_model_brain():
+    data = request.get_json()  # Get JSON data from the POST request
+    learning_rate = data.get('learning_rate')
+    epoch = data.get('epoch')
+    train_split_ratio = data.get('train_split_ratio')
+
+    # Generate the model path based on the received parameters
+    model_path = f"MODELS/MODEL{train_split_ratio}{learning_rate}{epoch}/model{train_split_ratio}{learning_rate}{epoch}.h5"
+    print(model_path)
+    try:
+        # Load the model based on the generated path
+        model = load_model(model_path)
+      
+        # Return success message indicating the model has been successfully loaded
+        return jsonify({"message": f"Successfully loaded the model: {model_path}"}), 200
+    except Exception as e:
+        print(e)
+        # Handle any exceptions or errors that might occur during model loading
+        return jsonify({"error": f"Failed to load the model: {str(e)}"}), 500
+
+
+
+
+def predict_base64_image(image_file):
+    try:
+        img_array = np.array(image_file)
+        img_array = img_array / 255.0  # Normalize the image data
+        img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
+
+        prediction = model.predict(img_array)
+        return prediction  # Modify this to return meaningful results based on your model's output
+    except Exception as e:
+        print(f"Error processing image: {e}")
+        return None
+
+@app.route('/predict_tumor_base64', methods=['POST'])
+def predict_tumor():
+    try:
+        data = request.get_json()
+        image_base64 = data['image']
+
+        # Remove the data URL prefix and decode
+        if ',' in image_base64:
+            _, image_base64 = image_base64.split(',', 1)
+        image_data = base64.b64decode(image_base64)
+
+        # Create an image from the decoded data
+        image = Image.open(io.BytesIO(image_data))
+
+        # Resize the image and convert to RGB if necessary (adjust dimensions as needed)
+        image = image.resize((224, 224)).convert('RGB')
+
+        # Predict using the model
+        prediction = predict_base64_image(image)
+        if prediction is None:
+            raise ValueError("Model prediction failed")
+
+        # Convert prediction to a meaningful result
+        # Modify this according to your model's output
+        prediction_result = 'malignant' if prediction[0][0] > 0.5 else 'benign'
+
+        return jsonify({'prediction': prediction_result})
+    except UnidentifiedImageError:
+        return jsonify({'error': 'Cannot identify image file'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+####################### For Titanic Model######################################################3
 df = pd.read_csv('./train.csv')
 dataset = pd.read_csv('./train.csv')
 features_X = list(df.columns)
@@ -135,13 +248,10 @@ def predict():
         return jsonify({'error': str(e)}), 500
 
 
+##############################################################################################################################
 
-# Text Emotion Recognisation
-import re
-from sklearn.pipeline import Pipeline
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.ensemble import RandomForestClassifier
 
+##################### FOR Emotion detection###################################################################################
 global log_reg
 def dataframe_difference(df1, df2, which=None):
     comparison_df = df1.merge(
