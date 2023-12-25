@@ -19,8 +19,8 @@ from PIL import Image
 app = Flask(__name__)
 CORS(app)
 ############################## FOR Brain Tumor ###############################################
-model_path='model212.h5'
-model = load_model('model212.h5')
+model_path='keras_model.h5'
+model = load_model(model_path)
 @app.route('/idk_brain', methods=['POST'])
 def train_model_brain():
     data = request.get_json()  # Get JSON data from the POST request
@@ -50,7 +50,7 @@ def predict_base64_image(image_file):
         img_array = np.array(image_file)
         img_array = img_array / 255.0  # Normalize the image data
         img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
-
+        print(model.summary())
         prediction = model.predict(img_array)
         return prediction  # Modify this to return meaningful results based on your model's output
     except Exception as e:
@@ -67,7 +67,8 @@ def predict_tumor():
         if ',' in image_base64:
             _, image_base64 = image_base64.split(',', 1)
         image_data = base64.b64decode(image_base64)
-
+        with open('image.png', 'wb') as f:
+            f.write(image_data)
         # Create an image from the decoded data
         image = Image.open(io.BytesIO(image_data))
 
@@ -82,7 +83,7 @@ def predict_tumor():
         # Convert prediction to a meaningful result
         # Modify this according to your model's output
         prediction_result = 'malignant' if prediction[0][0] > 0.5 else 'benign'
-
+        print('predciction_result'+prediction_result)
         return jsonify({'prediction': prediction_result})
     except UnidentifiedImageError:
         return jsonify({'error': 'Cannot identify image file'}), 400
