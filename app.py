@@ -21,6 +21,16 @@ CORS(app)
 ############################## FOR Brain Tumor ###############################################
 model_path='keras_model.h5'
 model = load_model(model_path)
+def load_or_create_model(model_path):
+    global model
+    try:
+        model = load_model(model_path)
+        return True
+    except Exception as e:
+        print(f"Failed to load model: {str(e)}")
+        return False
+
+# This route is for training or loading a model
 @app.route('/idk_brain', methods=['POST'])
 def train_model_brain():
     data = request.get_json()  # Get JSON data from the POST request
@@ -31,20 +41,16 @@ def train_model_brain():
     # Generate the model path based on the received parameters
     model_path = f"MODELS/MODEL{train_split_ratio}{learning_rate}{epoch}/model{train_split_ratio}{learning_rate}{epoch}.h5"
     print(model_path)
-    try:
-        # Load the model based on the generated path
-        model = load_model(model_path)
-      
-        # Return success message indicating the model has been successfully loaded
+
+    # Load or create the model based on the generated path
+    success = load_or_create_model(model_path)
+
+    if success:
         return jsonify({"message": f"Successfully loaded the model: {model_path}"}), 200
-    except Exception as e:
-        print(e)
-        # Handle any exceptions or errors that might occur during model loading
-        return jsonify({"error": f"Failed to load the model: {str(e)}"}), 500
+    else:
+        return jsonify({"error": f"Failed to load the model: {model_path}"}), 500
 
-
-
-
+# Function to predict using the loaded model
 def predict_base64_image(image_file):
     try:
         img_array = np.array(image_file)
@@ -57,6 +63,7 @@ def predict_base64_image(image_file):
         print(f"Error processing image: {e}")
         return None
 
+# This route is for predicting using the loaded model
 @app.route('/predict_tumor_base64', methods=['POST'])
 def predict_tumor():
     try:
@@ -83,17 +90,12 @@ def predict_tumor():
         # Convert prediction to a meaningful result
         # Modify this according to your model's output
         prediction_result = 'malignant' if prediction[0][0] > 0.5 else 'benign'
-        print('predciction_result'+prediction_result)
+        print('prediction_result: ' + prediction_result)
         return jsonify({'prediction': prediction_result})
     except UnidentifiedImageError:
         return jsonify({'error': 'Cannot identify image file'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-
-
-
-
 
 
 
