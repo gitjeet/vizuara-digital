@@ -13,11 +13,106 @@ from sklearn.ensemble import RandomForestClassifier
 from keras.models import load_model
 import numpy as np 
 import base64
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn.cluster import KMeans
+import mpld3
+import plotly.express as px
+from plotly.offline import plot
 from PIL import Image
-
+import os
 
 app = Flask(__name__)
 CORS(app)
+############################# For Iris Project ###############################################
+def generate_kmeans_plots(num_clusters, save_html=True):
+    try:
+        iris = pd.read_csv("./IRIS.csv")
+        x_iris = iris.iloc[:, [0, 1, 2, 3]].values
+
+        kmeans = KMeans(n_clusters=num_clusters, init='k-means++', max_iter=300, n_init=10, random_state=0)
+        y_kmeans = kmeans.fit_predict(x_iris)
+
+        # Define cluster colors and labels
+        cluster_colors = ['orange', 'purple', 'green', 'gray']
+        cluster_labels = ['setosa', 'versicolor', 'virginica']
+
+        # 2D Scatter plot
+        fig_2d = plt.figure(figsize=(8, 5))
+        for cluster_label in range(num_clusters):
+            color = cluster_colors[cluster_label] if cluster_label < len(cluster_colors) else 'gray'
+            label = cluster_labels[cluster_label] if cluster_label < len(cluster_labels) else f'Unknown {cluster_label - 2}'
+            plt.scatter(x_iris[y_kmeans == cluster_label, 0], x_iris[y_kmeans == cluster_label, 1], s=100, c=color, label=label)
+
+        plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1], s=100, c='red', label='Centroids')
+        plt.title(f'K-Means Clustering with {num_clusters} Clusters (2D)')
+        plt.xlabel('Sepal Length')
+        plt.ylabel('Sepal Width')
+        plt.legend()
+
+        plot_2d_html = mpld3.fig_to_html(fig_2d)
+        plt.close(fig_2d)
+
+        # 3D Scatter plot using Plotly
+        fig_3d = px.scatter_3d(x=x_iris[:, 0], y=x_iris[:, 1], z=x_iris[:, 2], color=y_kmeans.astype(str))
+        fig_3d.update_traces(marker=dict(size=5))
+
+        # Add centroids to the 3D plot
+        for i, center in enumerate(kmeans.cluster_centers_[:, :3]):
+            fig_3d.add_scatter3d(x=[center[0]], y=[center[1]], z=[center[2]], mode='markers', marker=dict(size=8, color='red'), name='Centroids')
+
+        # Assigning custom colors and labels
+        for i in range(num_clusters):
+            fig_3d.data[i].name = cluster_labels[i] if i < len(cluster_labels) else f'Unknown {i - 2}'
+            fig_3d.data[i].marker.color = cluster_colors[i] if i < len(cluster_colors) else 'gray'
+
+        fig_3d.update_layout(scene=dict(xaxis_title='Sepal Length', yaxis_title='Sepal Width', zaxis_title='Petal Length'), legend_title="Clusters")
+
+        # Convert Plotly figure to HTML
+        plot_3d_html = plot(fig_3d, output_type='div')
+
+        return plot_2d_html, plot_3d_html
+    except ValueError as ve:
+        print(f"ValueError: {ve}")
+        return None, None
+
+
+@app.route('/kmeans', methods=['GET'])
+def kmeans_api():
+    try:
+        num_clusters = int(request.args.get('num_clusters'))
+        print(num_clusters)
+        if num_clusters <= 0:
+            return jsonify({"error": "Number of clusters must be greater than 0"})
+        
+        plot_2d, plot_3d = generate_kmeans_plots(num_clusters)
+        print(jsonify({"plot_2d": plot_2d, "plot_3d": plot_3d}))
+        return jsonify({"plot_2d": plot_2d, "plot_3d": plot_3d})
+    except ValueError:
+        return jsonify({"error": "Invalid input for the number of clusters"})
+
+    try:
+        num_clusters = int(request.args.get('num_clusters'))
+        if num_clusters <= 0:
+            return jsonify({"error": "Number of clusters must be greater than 0"})
+        
+        plot_2d, plot_3d = generate_kmeans_plots(num_clusters)
+
+        return jsonify({"plot_2d": plot_2d, "plot_3d": plot_3d})
+    except ValueError:
+        return jsonify({"error": "Invalid input for the number of clusters"})
+
+
+
+
+
+
+
+
+
+
+
+
 ############################## FOR Brain Tumor ###############################################
 model_path='keras_model.h5'
 model = load_model(model_path)
