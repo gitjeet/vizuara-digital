@@ -21,9 +21,48 @@ import plotly.express as px
 from plotly.offline import plot
 from PIL import Image
 import os
-
+from sklearn.preprocessing import StandardScaler
+from sklearn.neural_network import MLPClassifier
 app = Flask(__name__)
 CORS(app)
+
+######################## For Heart Project #################################################
+@app.route('/train_ann', methods=['POST'])
+def train_ann():
+    # Receive parameters from the API request
+    data = request.get_json()
+    hidden_layers = data['hidden_layers']
+    epochs = data['epochs']
+    feature_columns = data['features']  # Assuming 'features' contains a list of column names
+    
+    # Read the heart dataset from CSV
+    df_heart = pd.read_csv('heart_dataset.csv')  # Assuming 'heart_dataset.csv' is the dataset file
+    df_heart.fillna(0, inplace=True)
+    # Extract feature columns from DataFrame
+    X_data = df_heart[
+        feature_columns
+    ]
+    y_data = df_heart['num'] 
+    print('Helllllllllllllllllllllllllllllllllllllllllllllllllllllllllllooooooooooooooooooooooo') # Assuming 'num' is the target column name
+    print(X_data)
+    # Preprocess the dataset
+    X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.2, random_state=42)
+
+    # Feature scaling
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    # Create and train the ANN model
+    model = MLPClassifier(hidden_layer_sizes=hidden_layers, max_iter=epochs, random_state=42)
+    model.fit(X_train_scaled, y_train)
+
+    # Evaluate the model
+    accuracy = model.score(X_test_scaled, y_test)
+
+    return jsonify({'message': 'ANN training completed', 'accuracy': accuracy})
+
+
 ############################# For Iris Project ###############################################
 def generate_kmeans_plots(num_clusters, save_html=True):
     try:
