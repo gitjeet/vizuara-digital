@@ -19,34 +19,91 @@ from sklearn.cluster import KMeans
 import mpld3
 import plotly.express as px
 from plotly.offline import plot
+import plotly.graph_objs as go
+import plotly.graph_objs as go
+import plotly.io as pio
+from sklearn.metrics import confusion_matrix
 from PIL import Image
 import os
 from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPClassifier
 app = Flask(__name__)
 CORS(app)
+trained_model = None
+scaler = StandardScaler()
+trained_features = []
+accuracy_heart = ''
+trained_model_heart = None
+trained_features_heart = None
 
+####################### For Test Heart Project######################################################
+@app.route('/test_train_ann', methods=['POST'])
+def test_train_ann():
+    global trained_model_heart, trained_features_heart, scaler
+    trained_model = trained_model_heart
+    trained_features = trained_features_heart
+   
+    # Check if model is trained
+    if trained_model is None:
+        return jsonify({'error': 'Model not trained yet'})
+
+    # Use the trained model object to make predictions
+    test_data = request.get_json()
+
+    # Ensure that the provided features match the trained features and rearrange them in the correct order
+    test_features = [feature for feature in trained_features if feature in test_data.keys()]
+    
+    # Create DataFrame for test data with matching features
+    X_test = pd.DataFrame(columns=trained_features)
+    for feature in test_features:
+        X_test[feature] = [test_data[feature]]
+    
+    # Fill missing features with NaN values
+    missing_features = [feature for feature in trained_features if feature not in test_features]
+    for feature in missing_features:
+        X_test[feature] = np.nan
+    print('helloworld')
+    print(missing_features)
+    print(trained_features_heart)
+    print(X_test)
+    # Reshape the single sample if necessary
+    X_test_scaled = scaler.transform(X_test) if len(X_test) > 0 else []
+
+    # Perform prediction only if there are samples
+    if len(X_test_scaled) > 0:
+        # Fill NaN values with zeros after scaling
+        X_test_scaled = np.nan_to_num(X_test_scaled)
+        prediction = trained_model.predict(X_test_scaled)
+        return jsonify({'prediction': prediction.tolist()})
+    else:
+        return jsonify({'error': 'No samples provided for prediction'})
 ######################## For Heart Project #################################################
 @app.route('/train_ann', methods=['POST'])
+@app.route('/train_ann', methods=['POST'])
 def train_ann():
+    global trained_model_heart, trained_features_heart, scaler
     # Receive parameters from the API request
     data = request.get_json()
+
+    # Validate required parameters
+    if 'hidden_layers' not in data or 'epochs' not in data or 'features' not in data:
+        return jsonify({'error': 'Missing required parameters'})
+
     hidden_layers = data['hidden_layers']
     epochs = data['epochs']
     feature_columns = data['features']  # Assuming 'features' contains a list of column names
-    
+    split_ratio = data.get('split_ratio', 0.2)  # Default to 0.2 if not provided
+
     # Read the heart dataset from CSV
     df_heart = pd.read_csv('heart_dataset.csv')  # Assuming 'heart_dataset.csv' is the dataset file
     df_heart.fillna(0, inplace=True)
+
     # Extract feature columns from DataFrame
-    X_data = df_heart[
-        feature_columns
-    ]
-    y_data = df_heart['num'] 
-    print('Helllllllllllllllllllllllllllllllllllllllllllllllllllllllllllooooooooooooooooooooooo') # Assuming 'num' is the target column name
-    print(X_data)
+    X_data = df_heart[feature_columns]
+    y_data = df_heart['num']  # Assuming 'num' is the target column name
+
     # Preprocess the dataset
-    X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=split_ratio, random_state=42)
 
     # Feature scaling
     scaler = StandardScaler()
@@ -58,9 +115,32 @@ def train_ann():
     model.fit(X_train_scaled, y_train)
 
     # Evaluate the model
-    accuracy = model.score(X_test_scaled, y_test)
+    y_pred = model.predict(X_test_scaled)
+    accuracy = accuracy_score(y_test, y_pred)
+    confusion = confusion_matrix(y_test, y_pred)
 
-    return jsonify({'message': 'ANN training completed', 'accuracy': accuracy})
+    # Generate confusion matrix plot
+    labels = ['0', '1']  # Assuming binary classification
+    cm_trace = go.Heatmap(z=confusion, x=labels, y=labels, colorscale='Blues', hoverongaps=False)
+    cm_layout = go.Layout(title='Confusion Matrix', xaxis=dict(title='Predicted Label'), yaxis=dict(title='True Label'))
+    cm_fig = go.Figure(data=[cm_trace], layout=cm_layout)
+
+    # Convert Plotly figure to HTML
+    cm_html = pio.to_html(cm_fig, full_html=False)
+    trained_model_heart = model
+    trained_features_heart = feature_columns
+    # Convert Plotly figure to HTML
+
+    # Calculate accuracy
+    accuracy = model.score(X_test_scaled, y_test)
+    accuracy_heart= accuracy
+    return jsonify({
+        'message': 'ANN training completed',
+        'accuracy': accuracy,
+        'confusion_matrix_html': cm_html
+    })
+
+
 
 
 ############################# For Iris Project ###############################################
