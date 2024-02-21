@@ -14,3 +14,4 @@ Pillow==10.1.0
 tensorflow==2.15.0
 mpld3==0.5.10 
 plotly==5.18.0 
+imblearn==0.0

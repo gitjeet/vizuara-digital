@@ -27,6 +27,9 @@ from PIL import Image
 import os
 from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPClassifier
+from imblearn.over_sampling import RandomOverSampler
+from imblearn.under_sampling import RandomUnderSampler
+
 app = Flask(__name__)
 CORS(app)
 trained_model = None
@@ -35,7 +38,7 @@ trained_features = []
 accuracy_heart = ''
 trained_model_heart = None
 trained_features_heart = None
-
+model_fix_heart=0 
 ####################### For Test Heart Project######################################################
 @app.route('/test_train_ann', methods=['POST'])
 def test_train_ann():
@@ -78,10 +81,10 @@ def test_train_ann():
     else:
         return jsonify({'error': 'No samples provided for prediction'})
 ######################## For Heart Project #################################################
-@app.route('/train_ann', methods=['POST'])
+
 @app.route('/train_ann', methods=['POST'])
 def train_ann():
-    global trained_model_heart, trained_features_heart, scaler
+    global trained_model_heart, trained_features_heart, scaler,model_fix_heart
     # Receive parameters from the API request
     data = request.get_json()
 
@@ -102,8 +105,14 @@ def train_ann():
     X_data = df_heart[feature_columns]
     y_data = df_heart['num']  # Assuming 'num' is the target column name
 
+    # Perform class balancing
+    oversampler = RandomOverSampler(random_state=42)
+    undersampler = RandomUnderSampler(random_state=42)
+    X_data_balanced, y_data_balanced = oversampler.fit_resample(X_data, y_data)
+    X_data_balanced, y_data_balanced = undersampler.fit_resample(X_data_balanced, y_data_balanced)
+
     # Preprocess the dataset
-    X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=split_ratio, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X_data_balanced, y_data_balanced, test_size=split_ratio, random_state=42)
 
     # Feature scaling
     scaler = StandardScaler()
@@ -127,19 +136,17 @@ def train_ann():
 
     # Convert Plotly figure to HTML
     cm_html = pio.to_html(cm_fig, full_html=False)
-    trained_model_heart = model
-    trained_features_heart = feature_columns
-    # Convert Plotly figure to HTML
+    if model_fix_heart==0:
+        trained_model_heart = model
+        trained_features_heart = feature_columns
+        model_fix_heart=model_fix_heart+1
 
-    # Calculate accuracy
-    accuracy = model.score(X_test_scaled, y_test)
-    accuracy_heart= accuracy
     return jsonify({
         'message': 'ANN training completed',
         'accuracy': accuracy,
         'confusion_matrix_html': cm_html
+        
     })
-
 
 
 
