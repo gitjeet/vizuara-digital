@@ -38,7 +38,7 @@ trained_features = []
 accuracy_heart = ''
 trained_model_heart = None
 trained_features_heart = None
-model_fix_heart=0 
+model_fix_heart=True 
 ####################### For Test Heart Project######################################################
 @app.route('/test_train_ann', methods=['POST'])
 def test_train_ann():
@@ -136,10 +136,10 @@ def train_ann():
 
     # Convert Plotly figure to HTML
     cm_html = pio.to_html(cm_fig, full_html=False)
-    if model_fix_heart==0:
+    if model_fix_heart==True:
         trained_model_heart = model
         trained_features_heart = feature_columns
-        model_fix_heart=model_fix_heart+1
+        model_fix_heart=False
 
     return jsonify({
         'message': 'ANN training completed',
