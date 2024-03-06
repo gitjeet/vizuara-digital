@@ -29,7 +29,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPClassifier
 from imblearn.over_sampling import RandomOverSampler
 from imblearn.under_sampling import RandomUnderSampler
-
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
+from sklearn.metrics import mean_absolute_error
 app = Flask(__name__)
 CORS(app)
 trained_model = None
@@ -39,6 +41,71 @@ accuracy_heart = ''
 trained_model_heart = None
 trained_features_heart = None
 model_fix_heart=True 
+###################### For Multiple Regression #####################################################
+@app.route('/train_regression', methods=['POST'])
+
+def train_multiple_regression():
+    # Read the dataset
+    df = pd.read_csv('student_performance.csv')
+    
+    # Fill NaN values with the mean of the column
+    df.fillna(df.mean(), inplace=True)
+
+    # Feature columns
+    X_columns = ['Hours Studied', 'Sleep Hours']
+
+    # Target column
+    y_column = 'Percentage Marks'
+
+    # Get train-test split ratio from request data
+    split_ratio = float(request.json['split_ratio'])
+
+    # Split the data into train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(df[X_columns], df[y_column], test_size=split_ratio, random_state=42)
+
+    # Train a multiple linear regression model
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+
+    # Make predictions on the entire dataset
+    y_pred = model.predict(df[X_columns])
+
+    # Calculate R-squared score on test set
+    r2 = r2_score(y_test, model.predict(X_test))
+
+    # Plotting
+    fig = go.Figure()
+
+    # Scatter plot for actual marks
+    fig.add_trace(go.Scatter3d(x=df[X_columns[0]][::64], y=df[X_columns[1]][::64], z=df[y_column][::64],
+                           mode='markers', marker=dict(size=5), name='Actual Marks'))
+
+    # Scatter plot for predicted marks using the same data points
+    fig.add_trace(go.Scatter3d(x=df[X_columns[0]], y=df[X_columns[1]], z=y_pred,
+                               mode='markers', marker=dict(size=5), name='Predicted Marks'))
+# Update layout
+    fig.update_layout(scene=dict(xaxis_title=X_columns[0], yaxis_title=X_columns[1], zaxis_title=y_column,
+                             aspectratio=dict(x=1, y=1, z=0.7), camera_eye=dict(x=0.4, y=0.4, z=0.6)),
+                  width=800, height=800,
+                  legend=dict(x=0.5, y=1.1, xanchor='center', yanchor='top'))  # Set legend position to top center
+    # Generate fitted surface (mesh plot)
+    x1_fit = np.linspace(df[X_columns[0]].min(), df[X_columns[0]].max(), 100)
+    x2_fit = np.linspace(df[X_columns[1]].min(), df[X_columns[1]].max(), 100)
+    X1FIT, X2FIT = np.meshgrid(x1_fit, x2_fit)
+    X_fit = np.column_stack((X1FIT.ravel(), X2FIT.ravel()))  # Include only two features
+    YFIT = model.predict(X_fit).reshape(X1FIT.shape)
+    fig.add_trace(go.Surface(x=X1FIT, y=X2FIT, z=YFIT, colorscale='RdBu', opacity=0.6, name='Fitted Surface'))
+
+    # Update layout
+    fig.update_layout(scene=dict(xaxis_title=X_columns[0], yaxis_title=X_columns[1], zaxis_title=y_column,
+                                 aspectratio=dict(x=1, y=1, z=1), camera_eye=dict(x=1.5, y=1.5, z=1.5)),
+                      width=600, height=600)
+    
+    # Save as HTML file
+    fig.show()
+    plot_html = fig.to_html(full_html=False)
+
+    return jsonify({'r2_score': 100-r2, 'plot_html': plot_html})
 ####################### For Test Heart Project######################################################
 @app.route('/test_train_ann', methods=['POST'])
 def test_train_ann():
