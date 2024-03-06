@@ -106,10 +106,10 @@ def predict_percentage_marks():
                       width=600, height=600)
     
     # Save as HTML file
-
+    fig.show()
     plot_html = fig.to_html(full_html=False)
 
-    return jsonify({'r2_score': predicted_percentage_marks, 'plot_html': plot_html})
+    return jsonify({'r2_score': predicted_percentage_marks[0], 'plot_html': plot_html})
 @app.route('/train_regression', methods=['POST'])
 def train_multiple_regression():
     global global_mesh_plot
