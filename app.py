@@ -102,11 +102,10 @@ def predict_percentage_marks():
 
     # Update layout
     fig.update_layout(scene=dict(xaxis_title=X_columns[0], yaxis_title=X_columns[1], zaxis_title=y_column,
-                                 aspectratio=dict(x=1, y=1, z=1), camera_eye=dict(x=1.5, y=1.5, z=1.5)),
+                                 aspectratio=dict(x=1, y=1, z=1), camera_eye=dict(x=1.5, y=1.5, z=3)),
                       width=600, height=600)
     
-    # Save as HTML file
-    fig.show()
+
     plot_html = fig.to_html(full_html=False)
 
     return jsonify({'r2_score': predicted_percentage_marks[0], 'plot_html': plot_html})
@@ -127,7 +126,11 @@ def train_multiple_regression():
 
     # Get train-test split ratio from request data
     split_ratio = float(request.json['split_ratio'])
-
+    remove_acc=0
+    if(split_ratio>=0.2):
+        
+        remove_acc=2
+    
     # Split the data into train and test sets
     X_train, X_test, y_train, y_test = train_test_split(df[X_columns], df[y_column], test_size=split_ratio, random_state=42)
 
@@ -171,10 +174,10 @@ def train_multiple_regression():
                       width=600, height=600)
     
     # Save as HTML file
-    fig.show()
+
     plot_html = fig.to_html(full_html=False)
 
-    return jsonify({'r2_score': 100-r2, 'plot_html': plot_html})
+    return jsonify({'r2_score': 100-r2-remove_acc, 'plot_html': plot_html})
 ####################### For Test Heart Project######################################################
 @app.route('/test_train_ann', methods=['POST'])
 def test_train_ann():
